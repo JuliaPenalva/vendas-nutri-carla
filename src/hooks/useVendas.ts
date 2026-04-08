@@ -65,10 +65,10 @@ export function usePreviousPeriodVendas(filters: Filters) {
 
     supabase
       .from('vendas_fitness')
-      .select('status, faturamento_liquido, preco_total')
+      .select('*')
       .gte('data_de_venda', prevFrom + 'T00:00:00')
       .lte('data_de_venda', prevTo + 'T23:59:59')
-      .then(({ data: rows }) => setData(rows || []))
+      .then(({ data: rows }) => setData((rows as Venda[]) || []))
   }, [filters])
 
   return data
@@ -83,7 +83,7 @@ export function useMetaData() {
       .from('vendas_fitness')
       .select('nome_do_produto')
       .then(({ data }) => {
-        const unique = [...new Set((data || []).map((d: { nome_do_produto: string }) => d.nome_do_produto))].sort()
+        const unique = Array.from(new Set((data || []).map((d: { nome_do_produto: string }) => d.nome_do_produto))).sort()
         setProdutos(unique)
       })
   }, [])
