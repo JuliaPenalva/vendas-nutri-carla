@@ -7,13 +7,15 @@ export function calcKPIs(current: Venda[], previous: Venda[]): KPIData {
   const totalCompras = completos.length
   const faturamentoTotal = completos.reduce((s, v) => s + (v.faturamento_liquido || 0), 0)
   const percentualValidas = current.length > 0 ? (completos.length / current.length) * 100 : 0
+  const ticketMedio = totalCompras > 0 ? faturamentoTotal / totalCompras : 0
 
   const prevCompletos = previous.filter(v => v.status === 'Completo')
   const totalComprasAnterior = prevCompletos.length
   const faturamentoAnterior = prevCompletos.reduce((s, v) => s + (v.faturamento_liquido || 0), 0)
   const percentualValidasAnterior = previous.length > 0 ? (prevCompletos.length / previous.length) * 100 : 0
+  const ticketMedioAnterior = totalComprasAnterior > 0 ? faturamentoAnterior / totalComprasAnterior : 0
 
-  return { totalCompras, faturamentoTotal, percentualValidas, totalComprasAnterior, faturamentoAnterior, percentualValidasAnterior }
+  return { totalCompras, faturamentoTotal, percentualValidas, ticketMedio, totalComprasAnterior, faturamentoAnterior, percentualValidasAnterior, ticketMedioAnterior }
 }
 
 export function calcCancelamentoKPIs(vendas: Venda[]): CancelamentoKPI {
@@ -47,12 +49,10 @@ export function faturamentoPorProduto(vendas: Venda[]): ChartDataItem[] {
 export function faturamentoMensalPorChave(vendas: Venda[], chave: keyof Venda): MonthlyDataItem[] {
   const completos = vendas.filter(v => v.status === 'Completo')
   const map: Record<string, Record<string, number>> = {}
-  const keys = new Set<string>()
 
   completos.forEach(v => {
     const mes = format(parseISO(v.data_de_venda), 'MMM/yy', { locale: ptBR })
     const k = String(v[chave] || 'Desconhecido')
-    keys.add(k)
     if (!map[mes]) map[mes] = {}
     map[mes][k] = (map[mes][k] || 0) + (v.faturamento_liquido || 0)
   })
@@ -61,9 +61,10 @@ export function faturamentoMensalPorChave(vendas: Venda[], chave: keyof Venda): 
     .map(([mes, vals]) => ({ mes, ...vals }))
     .sort((a, b) => {
       const months = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
-      const ai = months.findIndex(m => a.mes.toLowerCase().startsWith(m))
-      const bi = months.findIndex(m => b.mes.toLowerCase().startsWith(m))
-      return ai - bi
+      const getYear = (m: string) => parseInt(m.split('/')[1] || '0')
+      const getMonth = (m: string) => months.findIndex(mo => m.toLowerCase().startsWith(mo))
+      const yearDiff = getYear(String(a.mes)) - getYear(String(b.mes))
+      return yearDiff !== 0 ? yearDiff : getMonth(String(a.mes)) - getMonth(String(b.mes))
     })
 }
 
@@ -106,9 +107,10 @@ export function cancelamentoMensalPorChave(vendas: Venda[], chave: keyof Venda):
     })
     .sort((a, b) => {
       const months = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
-      const ai = months.findIndex(m => a.mes.toLowerCase().startsWith(m))
-      const bi = months.findIndex(m => b.mes.toLowerCase().startsWith(m))
-      return ai - bi
+      const getYear = (m: string) => parseInt(m.split('/')[1] || '0')
+      const getMonth = (m: string) => months.findIndex(mo => m.toLowerCase().startsWith(mo))
+      const yearDiff = getYear(String(a.mes)) - getYear(String(b.mes))
+      return yearDiff !== 0 ? yearDiff : getMonth(String(a.mes)) - getMonth(String(b.mes))
     })
 }
 
@@ -138,6 +140,12 @@ export function formatBRL(value: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(value)
 }
 
+export function formatBRLShort(value: number): string {
+  if (value >= 1000000) return `R$ ${(value / 1000000).toFixed(1)}M`
+  if (value >= 1000) return `R$ ${(value / 1000).toFixed(1)}k`
+  return formatBRL(value)
+}
+
 export function formatNum(value: number): string {
   return new Intl.NumberFormat('pt-BR').format(value)
 }
@@ -147,9 +155,10 @@ export function formatPct(value: number): string {
 }
 
 export const PLATAFORMA_COLORS: Record<string, string> = {
-  Hotmart: '#ff6b35',
-  Kiwify: '#00d4ff',
-  Hubla: '#a855f7',
+  Hotmart: '#0F482F',
+  Kiwify: '#779E39',
+  Hubla: '#E5AB7E',
 }
 
-export const PRODUTO_COLORS = ['#00d4ff', '#00e5a0', '#ffa502', '#ff4757', '#a855f7']
+export const PRODUTO_COLORS = ['#0F482F', '#779E39', '#E5AB7E', '#5a7a2a', '#c8874a']
+export const MUTED_COLOR = '#3a4a2a'
