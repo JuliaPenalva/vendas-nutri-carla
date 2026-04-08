@@ -1,48 +1,71 @@
 'use client'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, Legend, Cell,
+  LineChart, Line, Legend, Cell, LabelList,
 } from 'recharts'
-import { ChartDataItem, MonthlyDataItem } from '@/types'
-import { formatBRL, formatPct, PLATAFORMA_COLORS, PRODUTO_COLORS } from '@/lib/dataUtils'
-import { Card, EmptyState, Skeleton } from '@/components/ui'
+import { ChartDataItem, MonthlyDataItem, AfiliadoData } from '@/types'
+import { formatBRL, formatBRLShort, formatPct, formatNum, PLATAFORMA_COLORS, PRODUTO_COLORS, MUTED_COLOR } from '@/lib/dataUtils'
+import { Card, EmptyState, Skeleton, ProgressBar } from '@/components/ui'
 import clsx from 'clsx'
 
-const AXIS_STYLE = { fill: '#4a6080', fontSize: 11, fontFamily: 'DM Mono, monospace' }
-const GRID_STYLE = { stroke: '#1e2a3a', strokeDasharray: '3 3' }
+const AXIS_STYLE = { fill: '#a8b090', fontSize: 11, fontFamily: 'Plus Jakarta Sans, sans-serif' }
+const GRID_STYLE = { stroke: '#3a4a2a', strokeDasharray: '3 3' }
 
-// ── Horizontal Bar (faturamento por grupo) ───────────────────────────────────
+// ── Custom label for bar end ──────────────────────────────────────────────────
+const BarLabel = ({ x, y, width, height, value }: { x?: number; y?: number; width?: number; height?: number; value?: number }) => {
+  if (!value || !x || !y || !width || !height) return null
+  const isHorizontal = height < 30
+  if (isHorizontal) {
+    return (
+      <text x={x + width + 6} y={y + height / 2 + 4} fill="#a8b090" fontSize={10} fontFamily="Plus Jakarta Sans">
+        {formatBRLShort(value)}
+      </text>
+    )
+  }
+  return (
+    <text x={x + width / 2} y={y - 4} textAnchor="middle" fill="#a8b090" fontSize={10} fontFamily="Plus Jakarta Sans">
+      {formatBRLShort(value)}
+    </text>
+  )
+}
+
+// ── Horizontal Bar ────────────────────────────────────────────────────────────
 interface HBarProps {
   data: ChartDataItem[]
   title: string
   loading?: boolean
   color?: string
   valueFormat?: 'brl' | 'pct'
+  highlightNames?: string[]
 }
 
-export function HorizontalBarChart({ data, title, loading, color = '#00d4ff', valueFormat = 'brl' }: HBarProps) {
+export function HorizontalBarChart({ data, title, loading, color = '#779E39', valueFormat = 'brl', highlightNames }: HBarProps) {
   const fmt = (v: number) => valueFormat === 'brl' ? formatBRL(v) : formatPct(v)
+  const fmtShort = (v: number) => valueFormat === 'brl' ? formatBRLShort(v) : formatPct(v)
+  const hasHighlight = highlightNames && highlightNames.length > 0
 
   return (
     <Card className="flex flex-col gap-4">
-      <h3 className="text-xs uppercase tracking-widest text-text-dim font-display">{title}</h3>
+      <h3 className="text-xs uppercase tracking-widest text-text-dim font-body font-medium">{title}</h3>
       {loading ? (
-        <div className="space-y-3">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
-        </div>
+        <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-6 w-full" />)}</div>
       ) : data.length === 0 ? <EmptyState /> : (
-        <ResponsiveContainer width="100%" height={data.length * 52 + 20}>
-          <BarChart data={data} layout="vertical" margin={{ left: 8, right: 60 }}>
+        <ResponsiveContainer width="100%" height={data.length * 40 + 20}>
+          <BarChart data={data} layout="vertical" margin={{ left: 8, right: 70 }}>
             <CartesianGrid horizontal={false} {...GRID_STYLE} />
-            <XAxis type="number" tick={AXIS_STYLE} tickFormatter={fmt} axisLine={false} tickLine={false} />
-            <YAxis type="category" dataKey="name" tick={AXIS_STYLE} width={180} axisLine={false} tickLine={false} />
+            <XAxis type="number" tick={AXIS_STYLE} tickFormatter={fmtShort} axisLine={false} tickLine={false} />
+            <YAxis type="category" dataKey="name" tick={AXIS_STYLE} width={170} axisLine={false} tickLine={false} />
             <Tooltip
               formatter={(v: number) => [fmt(v), '']}
-              contentStyle={{ background: '#131928', border: '1px solid #1e2a3a', borderRadius: 8, fontSize: 12 }}
-              labelStyle={{ color: '#e2eaf5' }}
+              contentStyle={{ background: '#222818', border: '1px solid #3a4a2a', borderRadius: 8, fontSize: 12 }}
+              labelStyle={{ color: '#EBE2D9' }}
             />
-            <Bar dataKey="value" fill={color} radius={[0, 4, 4, 0]} barSize={20}>
-              {data.map((_, i) => <Cell key={i} fillOpacity={1 - i * 0.12} fill={color} />)}
+            <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={14}>
+              <LabelList content={<BarLabel />} />
+              {data.map((entry, i) => {
+                const isHighlighted = !hasHighlight || highlightNames!.includes(entry.name)
+                return <Cell key={i} fill={isHighlighted ? color : MUTED_COLOR} fillOpacity={isHighlighted ? 1 : 0.4} />
+              })}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -51,7 +74,7 @@ export function HorizontalBarChart({ data, title, loading, color = '#00d4ff', va
   )
 }
 
-// ── Stacked Bar (mensal) ─────────────────────────────────────────────────────
+// ── Stacked Bar ───────────────────────────────────────────────────────────────
 interface StackedBarProps {
   data: MonthlyDataItem[]
   title: string
@@ -59,14 +82,17 @@ interface StackedBarProps {
   colorMap?: Record<string, string>
   loading?: boolean
   valueFormat?: 'brl' | 'pct'
+  highlightKeys?: string[]
 }
 
-export function StackedBarChart({ data, title, keys, colorMap, loading, valueFormat = 'brl' }: StackedBarProps) {
-  const fmt = (v: number) => valueFormat === 'brl' ? formatBRL(v) : formatPct(v)
+export function StackedBarChart({ data, title, keys, colorMap, loading, valueFormat = 'brl', highlightKeys }: StackedBarProps) {
+  const fmt = (v: number) => valueFormat === 'brl' ? formatBRLShort(v) : formatPct(v)
+  const fmtFull = (v: number) => valueFormat === 'brl' ? formatBRL(v) : formatPct(v)
+  const hasHighlight = highlightKeys && highlightKeys.length > 0
 
   return (
     <Card className="flex flex-col gap-4">
-      <h3 className="text-xs uppercase tracking-widest text-text-dim font-display">{title}</h3>
+      <h3 className="text-xs uppercase tracking-widest text-text-dim font-body font-medium">{title}</h3>
       {loading ? (
         <Skeleton className="h-64 w-full" />
       ) : data.length === 0 ? <EmptyState /> : (
@@ -74,15 +100,26 @@ export function StackedBarChart({ data, title, keys, colorMap, loading, valueFor
           <BarChart data={data} margin={{ left: 0, right: 8 }}>
             <CartesianGrid vertical={false} {...GRID_STYLE} />
             <XAxis dataKey="mes" tick={AXIS_STYLE} axisLine={false} tickLine={false} />
-            <YAxis tick={AXIS_STYLE} tickFormatter={fmt} axisLine={false} tickLine={false} width={80} />
+            <YAxis tick={AXIS_STYLE} tickFormatter={fmt} axisLine={false} tickLine={false} width={72} />
             <Tooltip
-              formatter={(v: number, name: string) => [fmt(v), name]}
-              contentStyle={{ background: '#131928', border: '1px solid #1e2a3a', borderRadius: 8, fontSize: 12 }}
+              formatter={(v: number, name: string) => [fmtFull(v), name]}
+              contentStyle={{ background: '#222818', border: '1px solid #3a4a2a', borderRadius: 8, fontSize: 12 }}
             />
-            <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'DM Mono, monospace', paddingTop: 8 }} />
-            {keys.map((k, i) => (
-              <Bar key={k} dataKey={k} stackId="a" fill={colorMap?.[k] || PRODUTO_COLORS[i % PRODUTO_COLORS.length]} radius={i === keys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
-            ))}
+            <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'Plus Jakarta Sans, sans-serif', paddingTop: 8 }} />
+            {keys.map((k, i) => {
+              const isHighlighted = !hasHighlight || highlightKeys!.includes(k)
+              const baseColor = colorMap?.[k] || PRODUTO_COLORS[i % PRODUTO_COLORS.length]
+              return (
+                <Bar
+                  key={k}
+                  dataKey={k}
+                  stackId="a"
+                  fill={isHighlighted ? baseColor : MUTED_COLOR}
+                  fillOpacity={isHighlighted ? 1 : 0.3}
+                  radius={i === keys.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+                />
+              )
+            })}
           </BarChart>
         </ResponsiveContainer>
       )}
@@ -90,7 +127,7 @@ export function StackedBarChart({ data, title, keys, colorMap, loading, valueFor
   )
 }
 
-// ── Line Chart (cancelamento mensal) ─────────────────────────────────────────
+// ── Line Chart ────────────────────────────────────────────────────────────────
 interface LineChartProps {
   data: MonthlyDataItem[]
   title: string
@@ -98,12 +135,15 @@ interface LineChartProps {
   colorMap?: Record<string, string>
   loading?: boolean
   avgLine?: number
+  highlightKeys?: string[]
 }
 
-export function CancelamentoLineChart({ data, title, keys, colorMap, loading, avgLine }: LineChartProps) {
+export function CancelamentoLineChart({ data, title, keys, colorMap, loading, avgLine, highlightKeys }: LineChartProps) {
+  const hasHighlight = highlightKeys && highlightKeys.length > 0
+
   return (
     <Card className="flex flex-col gap-4">
-      <h3 className="text-xs uppercase tracking-widest text-text-dim font-display">{title}</h3>
+      <h3 className="text-xs uppercase tracking-widest text-text-dim font-body font-medium">{title}</h3>
       {loading ? (
         <Skeleton className="h-64 w-full" />
       ) : data.length === 0 ? <EmptyState /> : (
@@ -114,22 +154,27 @@ export function CancelamentoLineChart({ data, title, keys, colorMap, loading, av
             <YAxis tick={AXIS_STYLE} tickFormatter={v => `${v}%`} axisLine={false} tickLine={false} width={48} />
             <Tooltip
               formatter={(v: number, name: string) => [`${v.toFixed(1)}%`, name]}
-              contentStyle={{ background: '#131928', border: '1px solid #1e2a3a', borderRadius: 8, fontSize: 12 }}
+              contentStyle={{ background: '#222818', border: '1px solid #3a4a2a', borderRadius: 8, fontSize: 12 }}
             />
-            <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'DM Mono, monospace', paddingTop: 8 }} />
-            {keys.map((k, i) => (
-              <Line
-                key={k}
-                type="monotone"
-                dataKey={k}
-                stroke={colorMap?.[k] || PRODUTO_COLORS[i % PRODUTO_COLORS.length]}
-                strokeWidth={2}
-                dot={{ r: 3, fill: colorMap?.[k] || PRODUTO_COLORS[i % PRODUTO_COLORS.length] }}
-                activeDot={{ r: 5 }}
-              />
-            ))}
+            <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'Plus Jakarta Sans, sans-serif', paddingTop: 8 }} />
+            {keys.map((k, i) => {
+              const isHighlighted = !hasHighlight || highlightKeys!.includes(k)
+              const baseColor = colorMap?.[k] || PRODUTO_COLORS[i % PRODUTO_COLORS.length]
+              return (
+                <Line
+                  key={k}
+                  type="monotone"
+                  dataKey={k}
+                  stroke={isHighlighted ? baseColor : MUTED_COLOR}
+                  strokeWidth={isHighlighted ? 2 : 1}
+                  strokeOpacity={isHighlighted ? 1 : 0.3}
+                  dot={{ r: 3, fill: isHighlighted ? baseColor : MUTED_COLOR }}
+                  activeDot={{ r: 5 }}
+                />
+              )
+            })}
             {avgLine !== undefined && (
-              <Line dataKey={() => avgLine} stroke="#4a6080" strokeDasharray="4 4" strokeWidth={1} dot={false} name="Média geral" legendType="none" />
+              <Line dataKey={() => avgLine} stroke="#6b7a5a" strokeDasharray="4 4" strokeWidth={1} dot={false} name="Média geral" legendType="none" />
             )}
           </LineChart>
         </ResponsiveContainer>
@@ -138,17 +183,13 @@ export function CancelamentoLineChart({ data, title, keys, colorMap, loading, av
   )
 }
 
-// ── Afiliados Table ──────────────────────────────────────────────────────────
-import { AfiliadoData } from '@/types'
-import { formatBRL as fBRL, formatNum } from '@/lib/dataUtils'
-import { ProgressBar } from '@/components/ui'
-
+// ── Afiliados Table ───────────────────────────────────────────────────────────
 export function AfiliadosTable({ data, loading }: { data: AfiliadoData[]; loading?: boolean }) {
   const maxFat = data[0]?.faturamento || 1
 
   return (
     <Card>
-      <h3 className="text-xs uppercase tracking-widest text-text-dim font-display mb-4">Performance de Afiliados</h3>
+      <h3 className="text-xs uppercase tracking-widest text-text-dim font-body font-medium mb-4">Performance de Afiliados</h3>
       {loading ? (
         <div className="space-y-3">{[...Array(6)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
       ) : data.length === 0 ? <EmptyState /> : (
@@ -156,27 +197,27 @@ export function AfiliadosTable({ data, loading }: { data: AfiliadoData[]; loadin
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border text-text-dim">
-                <th className="text-left py-2 pr-4 font-normal">#</th>
-                <th className="text-left py-2 pr-4 font-normal">Afiliado</th>
-                <th className="text-right py-2 pr-4 font-normal">Vendas</th>
-                <th className="text-right py-2 pr-4 font-normal">Faturamento</th>
-                <th className="text-left py-2 w-32 font-normal">% do Total</th>
+                <th className="text-left py-2 pr-4 font-medium">#</th>
+                <th className="text-left py-2 pr-4 font-medium">Afiliado</th>
+                <th className="text-right py-2 pr-4 font-medium">Vendas</th>
+                <th className="text-right py-2 pr-4 font-medium">Faturamento</th>
+                <th className="text-left py-2 w-32 font-medium">% do Total</th>
               </tr>
             </thead>
             <tbody>
               {data.map((row, i) => (
-                <tr key={row.afiliado} className={clsx('border-b border-border/40 hover:bg-border/20 transition-colors', i === 0 && 'text-accent')}>
+                <tr key={row.afiliado} className={clsx('border-b border-border/40 hover:bg-border/20 transition-colors', i === 0 && 'text-accent-light')}>
                   <td className="py-2.5 pr-4 text-muted">{i + 1}</td>
-                  <td className="py-2.5 pr-4 font-display">
+                  <td className="py-2.5 pr-4 font-medium">
                     {row.afiliado === '— Venda Direta —'
                       ? <span className="text-text-dim italic">{row.afiliado}</span>
                       : row.afiliado}
                   </td>
                   <td className="py-2.5 pr-4 text-right tabular-nums">{formatNum(row.vendas)}</td>
-                  <td className="py-2.5 pr-4 text-right tabular-nums text-success">{fBRL(row.faturamento)}</td>
+                  <td className="py-2.5 pr-4 text-right tabular-nums text-success">{formatBRL(row.faturamento)}</td>
                   <td className="py-2.5">
                     <div className="flex items-center gap-2">
-                      <ProgressBar value={row.faturamento} max={maxFat} color={i === 0 ? '#00d4ff' : '#00e5a0'} />
+                      <ProgressBar value={row.faturamento} max={maxFat} color={i === 0 ? '#779E39' : '#0F482F'} />
                       <span className="text-text-dim w-10 text-right shrink-0">{row.percentual.toFixed(1)}%</span>
                     </div>
                   </td>

@@ -31,9 +31,11 @@ export interface KPIData {
   totalCompras: number
   faturamentoTotal: number
   percentualValidas: number
+  ticketMedio: number
   totalComprasAnterior: number
   faturamentoAnterior: number
   percentualValidasAnterior: number
+  ticketMedioAnterior: number
 }
 
 export interface ChartDataItem {
