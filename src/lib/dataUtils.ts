@@ -1,5 +1,5 @@
 import { Venda, KPIData, ChartDataItem, MonthlyDataItem, AfiliadoData, CancelamentoKPI } from '@/types'
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 export function calcKPIs(current: Venda[], previous: Venda[]): KPIData {
@@ -56,7 +56,7 @@ export function faturamentoMensalPorChave(vendas: Venda[], chave: keyof Venda): 
   const completos = vendas.filter(v => v.status === 'Completo')
   const map: Record<string, Record<string, number>> = {}
   completos.forEach(v => {
-    const mes = format(parseISO(v.data_de_venda), 'MMM/yy', { locale: ptBR })
+    const mes = format(new Date(v.data_de_venda.replace(" ", "T")), 'MMM/yy', { locale: ptBR })
     const k = String(v[chave] || 'Desconhecido')
     if (!map[mes]) map[mes] = {}
     map[mes][k] = (map[mes][k] || 0) + (v.faturamento_liquido || 0)
@@ -80,7 +80,7 @@ export function cancelamentoPorGrupo(vendas: Venda[], chave: keyof Venda): Chart
 export function cancelamentoMensalPorChave(vendas: Venda[], chave: keyof Venda): MonthlyDataItem[] {
   const map: Record<string, Record<string, { total: number; cancelados: number }>> = {}
   vendas.forEach(v => {
-    const mes = format(parseISO(v.data_de_venda), 'MMM/yy', { locale: ptBR })
+    const mes = format(new Date(v.data_de_venda.replace(" ", "T")), 'MMM/yy', { locale: ptBR })
     const k = String(v[chave] || 'Sem afiliado')
     if (!map[mes]) map[mes] = {}
     if (!map[mes][k]) map[mes][k] = { total: 0, cancelados: 0 }
