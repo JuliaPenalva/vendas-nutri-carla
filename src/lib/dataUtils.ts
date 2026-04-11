@@ -2,6 +2,16 @@ import { Venda, KPIData, ChartDataItem, MonthlyDataItem, AfiliadoData, Cancelame
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
+
+function getMesLabel(dateStr: string): string {
+  // dateStr format: '2025-03-15 10:30:00' or '2025-03-15T10:30:00'
+  const parts = dateStr.substring(0, 7).split('-') // ['2025', '03']
+  const year = parts[0].slice(-2) // '25'
+  const monthIdx = parseInt(parts[1], 10) - 1
+  const months = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+  return months[monthIdx] + '/' + year
+}
+
 export function calcKPIs(current: Venda[], previous: Venda[]): KPIData {
   const completos = current.filter(v => v.status === 'Completo')
   const totalCompras = completos.length
@@ -56,7 +66,7 @@ export function faturamentoMensalPorChave(vendas: Venda[], chave: keyof Venda): 
   const completos = vendas.filter(v => v.status === 'Completo')
   const map: Record<string, Record<string, number>> = {}
   completos.forEach(v => {
-    const mes = format(new Date(v.data_de_venda.replace(" ", "T")), 'MMM/yy', { locale: ptBR })
+    const mes = getMesLabel(v.data_de_venda)
     const k = String(v[chave] || 'Desconhecido')
     if (!map[mes]) map[mes] = {}
     map[mes][k] = (map[mes][k] || 0) + (v.faturamento_liquido || 0)
@@ -80,7 +90,7 @@ export function cancelamentoPorGrupo(vendas: Venda[], chave: keyof Venda): Chart
 export function cancelamentoMensalPorChave(vendas: Venda[], chave: keyof Venda): MonthlyDataItem[] {
   const map: Record<string, Record<string, { total: number; cancelados: number }>> = {}
   vendas.forEach(v => {
-    const mes = format(new Date(v.data_de_venda.replace(" ", "T")), 'MMM/yy', { locale: ptBR })
+    const mes = getMesLabel(v.data_de_venda)
     const k = String(v[chave] || 'Sem afiliado')
     if (!map[mes]) map[mes] = {}
     if (!map[mes][k]) map[mes][k] = { total: 0, cancelados: 0 }
