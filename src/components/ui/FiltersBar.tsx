@@ -10,23 +10,24 @@ interface FiltersBarProps {
   setFilters: (f: Filters) => void
   produtos: string[]
   plataformas: string[]
+  anos: number[]
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
-const fmt = (d: Date) => format(d, 'yyyy-MM-dd')
+const fmtDate = (d: Date) => format(d, 'yyyy-MM-dd')
 
-function getQuarter(q: 1|2|3|4, year: number) {
-  const starts = [0, 3, 6, 9]
-  const ends   = [2, 5, 8, 11]
-  const from = new Date(year, starts[q - 1], 1)
-  const to   = new Date(year, ends[q - 1] + 1, 0)
-  return { from: fmt(from), to: fmt(to) }
+function getQuarter(q: 1 | 2 | 3 | 4, year: number) {
+  const monthStart = [0, 3, 6, 9][q - 1]
+  const monthEnd   = [2, 5, 8, 11][q - 1]
+  const from = new Date(year, monthStart, 1)
+  const to   = new Date(year, monthEnd + 1, 0) // last day of monthEnd
+  return { from: fmtDate(from), to: fmtDate(to) }
 }
 
-function getSemester(s: 1|2, year: number) {
+function getSemester(s: 1 | 2, year: number) {
   const from = new Date(year, s === 1 ? 0 : 6, 1)
-  const to   = new Date(year, s === 1 ? 5 : 11, s === 1 ? 30 : 31)
-  return { from: fmt(from), to: fmt(to) }
+  const to   = new Date(year, s === 1 ? 6 : 12, 0) // last day of Jun or Dec
+  return { from: fmtDate(from), to: fmtDate(to) }
 }
 
 // ── MultiSelect ───────────────────────────────────────────────────────────────
@@ -53,19 +54,16 @@ function MultiSelect({ label, options, selected, onChange }: {
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(o => !o)}
+      <button onClick={() => setOpen(o => !o)}
         className={clsx(
           'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-body transition-colors',
           selected.length > 0
             ? 'border-accent-light text-accent bg-accent-light/10'
             : 'border-border text-text-dim hover:border-accent-light/50 bg-card'
-        )}
-      >
+        )}>
         <span className="max-w-[140px] truncate">{displayLabel}</span>
         <ChevronDown size={11} className={clsx('transition-transform shrink-0', open && 'rotate-180')} />
       </button>
-
       {open && (
         <div className="dropdown-menu absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-lg shadow-lg min-w-[180px] py-1">
           {options.map(opt => (
@@ -103,7 +101,6 @@ function DateRangePicker({ dateFrom, dateTo, onChange }: {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => { setTempFrom(dateFrom); setTempTo(dateTo) }, [dateFrom, dateTo])
-
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
@@ -130,38 +127,33 @@ function DateRangePicker({ dateFrom, dateTo, onChange }: {
     }
   }
 
-  const prevMonth2 = calMonth === 0 ? 11 : calMonth - 1
-  const prevYear2  = calMonth === 0 ? calYear - 1 : calYear
+  const prevM = calMonth === 0 ? 11 : calMonth - 1
+  const prevY = calMonth === 0 ? calYear - 1 : calYear
 
-  const CalendarMonth = ({ year, month }: { year: number; month: number }) => {
+  const CalMonth = ({ year, month }: { year: number; month: number }) => {
     const firstDay = new Date(year, month, 1).getDay()
     const daysInMonth = new Date(year, month + 1, 0).getDate()
     const days: (number | null)[] = []
     for (let i = 0; i < firstDay; i++) days.push(null)
     for (let i = 1; i <= daysInMonth; i++) days.push(i)
-    const monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-
+    const mNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
     return (
       <div className="w-52">
-        <div className="text-center text-xs font-display font-semibold text-text mb-2">{monthNames[month]} {year}</div>
+        <div className="text-center text-xs font-display font-semibold text-text mb-2">{mNames[month]} {year}</div>
         <div className="grid grid-cols-7 gap-0.5 mb-1">
-          {['D','S','T','Q','Q','S','S'].map((d, i) => (
-            <div key={i} className="text-center text-[10px] text-muted py-0.5">{d}</div>
-          ))}
+          {['D','S','T','Q','Q','S','S'].map((d, i) => <div key={i} className="text-center text-[10px] text-muted py-0.5">{d}</div>)}
         </div>
         <div className="grid grid-cols-7 gap-0.5">
           {days.map((d, i) => {
             if (!d) return <div key={i} />
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-            const isFrom = dateStr === tempFrom
-            const isTo   = dateStr === tempTo
-            const inRange = tempFrom && tempTo && dateStr > tempFrom && dateStr < tempTo
+            const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+            const isFrom = ds === tempFrom, isTo = ds === tempTo
+            const inRange = tempFrom && tempTo && ds > tempFrom && ds < tempTo
             return (
-              <button key={i} onClick={() => handleDayClick(dateStr)}
+              <button key={i} onClick={() => handleDayClick(ds)}
                 className={clsx('text-[11px] py-1 rounded transition-colors text-center',
                   isFrom || isTo ? 'bg-accent text-white font-semibold' :
-                  inRange ? 'bg-accent-light/20 text-accent' :
-                  'hover:bg-surface text-text')}>
+                  inRange ? 'bg-accent-light/20 text-accent' : 'hover:bg-surface text-text')}>
                 {d}
               </button>
             )
@@ -180,30 +172,22 @@ function DateRangePicker({ dateFrom, dateTo, onChange }: {
         <span className="text-muted">→</span>
         <span className="tabular-nums">{fmtDisplay(dateTo)}</span>
       </button>
-
       {open && (
         <div className="dropdown-menu absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-xl p-4">
-          <div className="text-xs text-text-dim mb-3 font-body">
-            {selecting === 'from' ? '① Selecione a data de início' : '② Selecione a data de fim'}
-          </div>
+          <div className="text-xs text-text-dim mb-3">{selecting === 'from' ? '① Início' : '② Fim'}</div>
           <div className="flex gap-5">
             <div>
               <button onClick={() => { if (calMonth === 0) { setCalYear(y => y-1); setCalMonth(11) } else setCalMonth(m => m-1) }}
                 className="text-muted hover:text-accent text-xs mb-2 block">‹ anterior</button>
-              <CalendarMonth year={prevYear2} month={prevMonth2} />
+              <CalMonth year={prevY} month={prevM} />
             </div>
             <div className="w-px bg-border" />
             <div>
               <button onClick={() => { if (calMonth === 11) { setCalYear(y => y+1); setCalMonth(0) } else setCalMonth(m => m+1) }}
                 className="text-muted hover:text-accent text-xs mb-2 block">próximo ›</button>
-              <CalendarMonth year={calYear} month={calMonth} />
+              <CalMonth year={calYear} month={calMonth} />
             </div>
           </div>
-          {tempFrom && (
-            <div className="mt-3 pt-3 border-t border-border text-xs text-text-dim">
-              {fmtDisplay(tempFrom)}{tempTo && <> → <span className="text-accent font-medium">{fmtDisplay(tempTo)}</span></>}
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -211,99 +195,108 @@ function DateRangePicker({ dateFrom, dateTo, onChange }: {
 }
 
 // ── Preset Button ─────────────────────────────────────────────────────────────
-function PresetBtn({ label, active, onClick }: { label: string; active?: boolean; onClick: () => void }) {
+function Btn({ label, active, onClick }: { label: string; active?: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick}
       className={clsx(
         'px-2.5 py-1 text-xs rounded-md border transition-colors font-body whitespace-nowrap',
-        active
-          ? 'border-accent bg-accent text-white'
-          : 'border-border text-text-dim hover:border-accent-light hover:text-accent bg-card'
+        active ? 'border-accent bg-accent text-white' : 'border-border text-text-dim hover:border-accent-light hover:text-accent bg-card'
       )}>
       {label}
     </button>
   )
 }
 
-// ── Group label ───────────────────────────────────────────────────────────────
 function GroupLabel({ children }: { children: string }) {
   return <span className="text-[10px] text-muted font-body uppercase tracking-wider self-center">{children}</span>
 }
 
-// ── Main FiltersBar ───────────────────────────────────────────────────────────
-export default function FiltersBar({ filters, setFilters, produtos, plataformas }: FiltersBarProps) {
+function Divider() {
+  return <div className="w-px h-5 bg-border self-center" />
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function FiltersBar({ filters, setFilters, produtos, plataformas, anos }: FiltersBarProps) {
   const today = new Date()
   const thisYear = today.getFullYear()
-  const lastYear = thisYear - 1
+  const [refYear, setRefYear] = useState<number>(anos[0] ?? thisYear)
 
-  // Detect active preset to highlight button
-  const active = (() => {
-    const { dateFrom: f, dateTo: t } = filters
-    if (f === fmt(subDays(today, 7))  && t === fmt(today)) return '7d'
-    if (f === fmt(subDays(today, 30)) && t === fmt(today)) return '30d'
-    if (f === fmt(subDays(today, 90)) && t === fmt(today)) return '90d'
-    if (f === fmt(startOfMonth(today)) && t === fmt(endOfMonth(today))) return 'thisMonth'
-    if (f === fmt(startOfMonth(subMonths(today, 1))) && t === fmt(endOfMonth(subMonths(today, 1)))) return 'lastMonth'
-    for (const q of [1,2,3,4] as const) {
-      const qy = getQuarter(q, thisYear)
-      if (f === qy.from && t === qy.to) return `Q${q}-${thisYear}`
-      const qly = getQuarter(q, lastYear)
-      if (f === qly.from && t === qly.to) return `Q${q}-${lastYear}`
-    }
-    for (const s of [1,2] as const) {
-      const sy = getSemester(s, thisYear)
-      if (f === sy.from && t === sy.to) return `S${s}-${thisYear}`
-      const sly = getSemester(s, lastYear)
-      if (f === sly.from && t === sly.to) return `S${s}-${lastYear}`
-    }
-    if (f === fmt(startOfYear(today)) && t === fmt(endOfYear(today))) return 'thisYear'
-    if (f === fmt(startOfYear(subYears(today, 1))) && t === fmt(endOfYear(subYears(today, 1)))) return 'lastYear'
-    return null
-  })()
-
-  // Ref year: which year the period buttons refer to (this or last)
-  const [refYear, setRefYear] = useState(thisYear)
+  // Update refYear when anos loads
+  useEffect(() => {
+    if (anos.length > 0 && !anos.includes(refYear)) setRefYear(anos[0])
+  }, [anos, refYear])
 
   const set = (from: string, to: string) => setFilters({ ...filters, dateFrom: from, dateTo: to })
 
+  // Toggle helper: if already active, reset to full refYear range; else apply
+  const toggle = (from: string, to: string, isActive: boolean) => {
+    if (isActive) {
+      // deselect — go back to full year of refYear
+      set(fmtDate(startOfYear(new Date(refYear, 0, 1))), fmtDate(endOfYear(new Date(refYear, 0, 1))))
+    } else {
+      set(from, to)
+    }
+  }
+
+  const { dateFrom: f, dateTo: t } = filters
+
+  // Active detection
+  const is7d        = f === fmtDate(subDays(today, 7)) && t === fmtDate(today)
+  const is30d       = f === fmtDate(subDays(today, 30)) && t === fmtDate(today)
+  const is90d       = f === fmtDate(subDays(today, 90)) && t === fmtDate(today)
+  const isThisMonth = f === fmtDate(startOfMonth(today)) && t === fmtDate(endOfMonth(today))
+  const isLastMonth = f === fmtDate(startOfMonth(subMonths(today, 1))) && t === fmtDate(endOfMonth(subMonths(today, 1)))
+  const isThisYear  = f === fmtDate(startOfYear(today)) && t === fmtDate(endOfYear(today))
+  const isLastYear  = f === fmtDate(startOfYear(subYears(today, 1))) && t === fmtDate(endOfYear(subYears(today, 1)))
+
+  const activeQ = ([1,2,3,4] as const).find(q => {
+    const { from, to } = getQuarter(q, refYear)
+    return f === from && t === to
+  })
+  const activeS = ([1,2] as const).find(s => {
+    const { from, to } = getSemester(s, refYear)
+    return f === from && t === to
+  })
+
   return (
     <div className="px-6 py-3 border-b border-border bg-surface/80 backdrop-blur-sm sticky top-[49px] z-20">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
 
         {/* Dias */}
         <div className="flex items-center gap-1.5">
           <GroupLabel>Dias</GroupLabel>
-          <PresetBtn label="7d"  active={active === '7d'}  onClick={() => set(fmt(subDays(today, 7)),  fmt(today))} />
-          <PresetBtn label="30d" active={active === '30d'} onClick={() => set(fmt(subDays(today, 30)), fmt(today))} />
-          <PresetBtn label="90d" active={active === '90d'} onClick={() => set(fmt(subDays(today, 90)), fmt(today))} />
+          <Btn label="7d"  active={is7d}  onClick={() => is7d  ? set('2025-01-01','2025-12-31') : set(fmtDate(subDays(today, 7)), fmtDate(today))} />
+          <Btn label="30d" active={is30d} onClick={() => is30d ? set('2025-01-01','2025-12-31') : set(fmtDate(subDays(today, 30)), fmtDate(today))} />
+          <Btn label="90d" active={is90d} onClick={() => is90d ? set('2025-01-01','2025-12-31') : set(fmtDate(subDays(today, 90)), fmtDate(today))} />
         </div>
 
-        <div className="w-px h-5 bg-border" />
+        <Divider />
 
-        {/* Mês */}
+        {/* Mês — independente */}
         <div className="flex items-center gap-1.5">
           <GroupLabel>Mês</GroupLabel>
-          <PresetBtn label="Este mês" active={active === 'thisMonth'}
-            onClick={() => set(fmt(startOfMonth(today)), fmt(endOfMonth(today)))} />
-          <PresetBtn label="Último mês" active={active === 'lastMonth'}
-            onClick={() => set(fmt(startOfMonth(subMonths(today, 1))), fmt(endOfMonth(subMonths(today, 1))))} />
+          <Btn label="Este mês" active={isThisMonth}
+            onClick={() => isThisMonth
+              ? set('2025-01-01','2025-12-31')
+              : set(fmtDate(startOfMonth(today)), fmtDate(endOfMonth(today)))} />
+          <Btn label="Último mês" active={isLastMonth}
+            onClick={() => isLastMonth
+              ? set('2025-01-01','2025-12-31')
+              : set(fmtDate(startOfMonth(subMonths(today, 1))), fmtDate(endOfMonth(subMonths(today, 1))))} />
         </div>
 
-        <div className="w-px h-5 bg-border" />
+        <Divider />
 
-        {/* Ano de referência para T e S */}
-        <div className="flex items-center gap-1">
+        {/* Ano Ref — dinâmico */}
+        <div className="flex items-center gap-1.5">
           <GroupLabel>Ref.</GroupLabel>
-          <button onClick={() => setRefYear(thisYear)}
-            className={clsx('px-2 py-1 text-xs rounded border transition-colors font-body',
-              refYear === thisYear ? 'border-accent bg-accent text-white' : 'border-border text-text-dim bg-card hover:border-accent-light')}>
-            {thisYear}
-          </button>
-          <button onClick={() => setRefYear(lastYear)}
-            className={clsx('px-2 py-1 text-xs rounded border transition-colors font-body',
-              refYear === lastYear ? 'border-accent bg-accent text-white' : 'border-border text-text-dim bg-card hover:border-accent-light')}>
-            {lastYear}
-          </button>
+          {anos.map(ano => (
+            <button key={ano} onClick={() => setRefYear(ano)}
+              className={clsx('px-2 py-1 text-xs rounded border transition-colors font-body',
+                refYear === ano ? 'border-accent bg-accent text-white' : 'border-border text-text-dim bg-card hover:border-accent-light')}>
+              {ano}
+            </button>
+          ))}
         </div>
 
         {/* Trimestre */}
@@ -311,46 +304,43 @@ export default function FiltersBar({ filters, setFilters, produtos, plataformas 
           <GroupLabel>Trim.</GroupLabel>
           {([1,2,3,4] as const).map(q => {
             const { from, to } = getQuarter(q, refYear)
-            return (
-              <PresetBtn key={q} label={`${q}ºT`} active={active === `Q${q}-${refYear}`}
-                onClick={() => set(from, to)} />
-            )
+            const isActive = activeQ === q
+            return <Btn key={q} label={`${q}ºT`} active={isActive} onClick={() => toggle(from, to, isActive)} />
           })}
         </div>
 
-        <div className="w-px h-5 bg-border" />
+        <Divider />
 
         {/* Semestre */}
         <div className="flex items-center gap-1.5">
           <GroupLabel>Sem.</GroupLabel>
           {([1,2] as const).map(s => {
             const { from, to } = getSemester(s, refYear)
-            return (
-              <PresetBtn key={s} label={`${s}ºS`} active={active === `S${s}-${refYear}`}
-                onClick={() => set(from, to)} />
-            )
+            const isActive = activeS === s
+            return <Btn key={s} label={`${s}ºS`} active={isActive} onClick={() => toggle(from, to, isActive)} />
           })}
         </div>
 
-        <div className="w-px h-5 bg-border" />
+        <Divider />
 
-        {/* Ano */}
+        {/* Ano — independente */}
         <div className="flex items-center gap-1.5">
           <GroupLabel>Ano</GroupLabel>
-          <PresetBtn label="Este ano" active={active === 'thisYear'}
-            onClick={() => set(fmt(startOfYear(today)), fmt(endOfYear(today)))} />
-          <PresetBtn label="Último ano" active={active === 'lastYear'}
-            onClick={() => set(fmt(startOfYear(subYears(today, 1))), fmt(endOfYear(subYears(today, 1))))} />
+          <Btn label="Este ano" active={isThisYear}
+            onClick={() => isThisYear
+              ? set('2025-01-01','2025-12-31')
+              : set(fmtDate(startOfYear(today)), fmtDate(endOfYear(today)))} />
+          <Btn label="Último ano" active={isLastYear}
+            onClick={() => isLastYear
+              ? set('2025-01-01','2025-12-31')
+              : set(fmtDate(startOfYear(subYears(today, 1))), fmtDate(endOfYear(subYears(today, 1))))} />
         </div>
 
-        <div className="w-px h-5 bg-border" />
+        <Divider />
 
         {/* Calendário custom */}
-        <DateRangePicker
-          dateFrom={filters.dateFrom}
-          dateTo={filters.dateTo}
-          onChange={(from, to) => setFilters({ ...filters, dateFrom: from, dateTo: to })}
-        />
+        <DateRangePicker dateFrom={filters.dateFrom} dateTo={filters.dateTo}
+          onChange={(from, to) => setFilters({ ...filters, dateFrom: from, dateTo: to })} />
 
         {/* Dropdowns */}
         <MultiSelect label="Plataforma" options={plataformas} selected={filters.plataformas}
