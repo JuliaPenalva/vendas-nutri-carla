@@ -5,8 +5,8 @@ import { Venda, Filters } from '@/types'
 import { subDays, format, subMonths, parseISO } from 'date-fns'
 
 const DEFAULT_FILTERS: Filters = {
-  dateFrom: format(subMonths(new Date(), 12), 'yyyy-MM-dd'),
-  dateTo: format(new Date(), 'yyyy-MM-dd'),
+  dateFrom: '2025-01-01',
+  dateTo: '2025-12-31',
   plataformas: [],
   produtos: [],
 }
