@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Venda, Filters } from '@/types'
-import { subDays, format, subMonths, parseISO } from 'date-fns'
+import { subDays, format, parseISO } from 'date-fns'
 
 const DEFAULT_FILTERS: Filters = {
   dateFrom: '2025-01-01',
@@ -31,12 +31,8 @@ export function useVendas(filters: Filters) {
         .gte('data_de_venda', filters.dateFrom + 'T00:00:00')
         .lte('data_de_venda', filters.dateTo + 'T23:59:59')
 
-      if (filters.plataformas.length > 0) {
-        query = query.in('plataforma', filters.plataformas)
-      }
-      if (filters.produtos.length > 0) {
-        query = query.in('nome_do_produto', filters.produtos)
-      }
+      if (filters.plataformas.length > 0) query = query.in('plataforma', filters.plataformas)
+      if (filters.produtos.length > 0) query = query.in('nome_do_produto', filters.produtos)
 
       const { data: rows, error: err } = await query
       if (err) throw err
@@ -49,7 +45,6 @@ export function useVendas(filters: Filters) {
   }, [filters])
 
   useEffect(() => { fetchData() }, [fetchData])
-
   return { data, loading, error, refetch: fetchData }
 }
 
@@ -76,17 +71,22 @@ export function usePreviousPeriodVendas(filters: Filters) {
 
 export function useMetaData() {
   const [produtos, setProdutos] = useState<string[]>([])
+  const [anos, setAnos] = useState<number[]>([])
   const [plataformas] = useState(['Hotmart', 'Kiwify', 'Hubla'])
 
   useEffect(() => {
     supabase
       .from('vendas_fitness')
-      .select('nome_do_produto')
+      .select('nome_do_produto, data_de_venda')
       .then(({ data }) => {
-        const unique = Array.from(new Set((data || []).map((d: { nome_do_produto: string }) => d.nome_do_produto))).sort()
-        setProdutos(unique)
+        const rows = data || []
+        const uniqueProdutos = Array.from(new Set(rows.map((d: { nome_do_produto: string }) => d.nome_do_produto))).sort() as string[]
+        const uniqueAnos = Array.from(new Set(rows.map((d: { data_de_venda: string }) => new Date(d.data_de_venda).getFullYear())))
+          .sort((a, b) => (b as number) - (a as number)) as number[]
+        setProdutos(uniqueProdutos)
+        setAnos(uniqueAnos)
       })
   }, [])
 
-  return { produtos, plataformas }
+  return { produtos, plataformas, anos }
 }
