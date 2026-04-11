@@ -5,12 +5,12 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { formatBRL, formatNum, formatPct } from '@/lib/dataUtils'
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={clsx('animate-pulse rounded-lg bg-border/60', className)} />
+  return <div className={clsx('animate-pulse rounded-lg bg-border', className)} />
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={clsx('rounded-xl border border-border bg-card p-5 relative overflow-hidden', className)}>
+    <div className={clsx('rounded-xl border border-border bg-card p-5 relative overflow-hidden shadow-sm', className)}>
       {children}
     </div>
   )
@@ -34,7 +34,7 @@ function formatValue(v: number, f: KPIFormat) {
   return formatNum(v)
 }
 
-export function KPICard({ label, value, previous, format = 'num', icon, accent = '#779E39', loading }: KPICardProps) {
+export function KPICard({ label, value, previous, format = 'num', icon, accent = '#0F482F', loading }: KPICardProps) {
   const delta = previous !== undefined && previous > 0 ? ((value - previous) / previous) * 100 : null
 
   if (loading) {
@@ -50,15 +50,15 @@ export function KPICard({ label, value, previous, format = 'num', icon, accent =
   return (
     <Card>
       <div className="absolute top-0 left-0 w-1 h-full rounded-l-xl" style={{ backgroundColor: accent }} />
-      <div className="flex items-start justify-between mb-3 pl-2">
+      <div className="flex items-start justify-between mb-2 pl-3">
         <span className="text-xs text-text-dim uppercase tracking-widest font-body font-medium">{label}</span>
-        {icon && <span style={{ color: accent }}>{icon}</span>}
+        {icon && <span style={{ color: accent, opacity: 0.7 }}>{icon}</span>}
       </div>
-      <div className="text-3xl font-display font-semibold pl-2 mb-2" style={{ color: accent }}>
+      <div className="text-3xl font-display font-semibold pl-3 mb-2" style={{ color: accent }}>
         {formatValue(value, format)}
       </div>
       {delta !== null && (
-        <div className={clsx('flex items-center gap-1 text-xs pl-2', delta > 0 ? 'text-success' : delta < 0 ? 'text-danger' : 'text-muted')}>
+        <div className={clsx('flex items-center gap-1 text-xs pl-3', delta > 0 ? 'text-success' : delta < 0 ? 'text-danger' : 'text-muted')}>
           {delta > 0 ? <TrendingUp size={12} /> : delta < 0 ? <TrendingDown size={12} /> : <Minus size={12} />}
           <span>{Math.abs(delta).toFixed(1)}% vs período anterior</span>
         </div>
@@ -69,8 +69,8 @@ export function KPICard({ label, value, previous, format = 'num', icon, accent =
 
 export function SectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h2 className="font-body font-semibold text-xs uppercase tracking-widest text-text-dim mb-4 flex items-center gap-2">
-      <span className="w-4 h-px bg-accent-light inline-block" />
+    <h2 className="font-display text-sm text-text-dim mb-4 flex items-center gap-2 italic">
+      <span className="w-4 h-px bg-accent-light inline-block not-italic" />
       {children}
     </h2>
   )
@@ -79,7 +79,7 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 export function EmptyState({ message = 'Nenhum dado encontrado para os filtros selecionados.' }: { message?: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-text-dim text-sm gap-2">
-      <span className="text-2xl">◌</span>
+      <span className="text-2xl opacity-30">◌</span>
       <span>{message}</span>
     </div>
   )
