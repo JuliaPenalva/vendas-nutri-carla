@@ -48,31 +48,18 @@ export default function Home() {
                     activeTab === tab.id
                       ? 'bg-accent text-white border border-accent/20'
                       : 'text-text-dim hover:text-text hover:bg-border/60'
-<<<<<<< HEAD
-                  )}
-                >
-=======
                   )}>
->>>>>>> vercel-code
                   <Icon size={13} />
                   {tab.label}
                 </button>
               )
             })}
           </nav>
-<<<<<<< HEAD
-
-=======
->>>>>>> vercel-code
           <div className="w-24" />
         </div>
       </header>
 
-<<<<<<< HEAD
-      <FiltersBar filters={filters} setFilters={setFilters} produtos={produtos} plataformas={plataformas} />
-=======
       <FiltersBar filters={filters} setFilters={setFilters} produtos={produtos} plataformas={plataformas} anos={anos} />
->>>>>>> vercel-code
 
       {error && (
         <div className="mx-6 mt-4 p-4 rounded-lg border border-danger/30 bg-danger/5 text-danger text-sm">
