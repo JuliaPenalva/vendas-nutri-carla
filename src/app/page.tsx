@@ -26,7 +26,7 @@ export default function Home() {
   const { filters, setFilters } = useFilters()
   const { data: vendas, loading, error } = useVendas(filters)
   const previous = usePreviousPeriodVendas(filters)
-  const { produtos, plataformas } = useMetaData()
+  const { produtos, plataformas, anos } = useMetaData()
 
   return (
     <div className="min-h-screen bg-bg bg-grid-pattern bg-grid">
@@ -38,33 +38,41 @@ export default function Home() {
               Nutri<span className="text-accent-light">Dash</span>
             </span>
           </div>
-
           <nav className="flex gap-1">
             {TABS.map(tab => {
               const Icon = tab.icon
               return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                   className={clsx(
                     'flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-body font-medium transition-all',
                     activeTab === tab.id
                       ? 'bg-accent text-white border border-accent/20'
                       : 'text-text-dim hover:text-text hover:bg-border/60'
+<<<<<<< HEAD
                   )}
                 >
+=======
+                  )}>
+>>>>>>> vercel-code
                   <Icon size={13} />
                   {tab.label}
                 </button>
               )
             })}
           </nav>
+<<<<<<< HEAD
 
+=======
+>>>>>>> vercel-code
           <div className="w-24" />
         </div>
       </header>
 
+<<<<<<< HEAD
       <FiltersBar filters={filters} setFilters={setFilters} produtos={produtos} plataformas={plataformas} />
+=======
+      <FiltersBar filters={filters} setFilters={setFilters} produtos={produtos} plataformas={plataformas} anos={anos} />
+>>>>>>> vercel-code
 
       {error && (
         <div className="mx-6 mt-4 p-4 rounded-lg border border-danger/30 bg-danger/5 text-danger text-sm">
@@ -73,12 +81,8 @@ export default function Home() {
       )}
 
       <main>
-        {activeTab === 'visao' && (
-          <VisaoGeral vendas={vendas} previous={previous} loading={loading} filters={filters} />
-        )}
-        {activeTab === 'cancelamentos' && (
-          <Cancelamentos vendas={vendas} loading={loading} filters={filters} />
-        )}
+        {activeTab === 'visao' && <VisaoGeral vendas={vendas} previous={previous} loading={loading} filters={filters} />}
+        {activeTab === 'cancelamentos' && <Cancelamentos vendas={vendas} loading={loading} filters={filters} />}
       </main>
     </div>
   )
